@@ -1,6 +1,7 @@
 // API Configuration
+console.log("NEW SCRIPT LOADED 🚀");
 const API_BASE_URL = 'https://founder-stories.onrender.com/api';
-
+console.log("USING RENDER BACKEND ✅");
 // State
 let allBlogs = [];
 let currentBlog = null;
