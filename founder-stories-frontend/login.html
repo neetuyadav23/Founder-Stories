@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Founder's Stories</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .auth-container {
+      background: white;
+      border-radius: 24px;
+      padding: 48px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.25);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .auth-header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .auth-header h1 {
+      font-size: 32px;
+      font-weight: 700;
+      color: #1a1a1a;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .auth-header p {
+      font-size: 15px;
+      color: #6b7280;
+    }
+
+    .auth-tabs {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 32px;
+      background: #f3f4f6;
+      padding: 6px;
+      border-radius: 12px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 12px;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: #6b7280;
+    }
+
+    .tab-btn.active {
+      background: white;
+      color: #7c3aed;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .auth-form {
+      display: none;
+    }
+
+    .auth-form.active {
+      display: block;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      font-size: 15px;
+      font-family: inherit;
+      transition: all 0.2s ease;
+      color: #1f2937;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #7c3aed;
+      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+    }
+
+    .conditional-field {
+      display: none;
+    }
+
+    .conditional-field.show {
+      display: block;
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 14px;
+      background: #7c3aed;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+    }
+
+    .submit-btn:hover {
+      background: #6d28d9;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4);
+    }
+
+    .message {
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      margin-top: 16px;
+      display: none;
+    }
+
+    .message.error {
+      background: #fee2e2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+
+    .message.success {
+      background: #d1fae5;
+      color: #059669;
+      border: 1px solid #a7f3d0;
+    }
+
+    .back-link {
+      text-align: center;
+      margin-top: 24px;
+    }
+
+    .back-link a {
+      color: #7c3aed;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .back-link a:hover {
+      text-decoration: underline;
+    }
+
+    .loading {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #7c3aed;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-header">
+      <h1>Founder's Stories</h1>
+      <p>Welcome back! Share and read inspiring stories</p>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="tab-btn active" onclick="showTab('login')">Login</button>
+      <button class="tab-btn" onclick="showTab('register')">Register</button>
+    </div>
+
+    <!-- Login Form -->
+    <form id="loginForm" class="auth-form active" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="loginEmail" required placeholder="your.email@example.com">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPassword" required placeholder="••••••••">
+      </div>
+      <button type="submit" class="submit-btn">Login</button>
+      <div id="loginMessage" class="message"></div>
+    </form>
+
+    <!-- Register Form -->
+    <form id="registerForm" class="auth-form" onsubmit="handleRegister(event)">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="registerName" required placeholder="John Doe">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="registerEmail" required placeholder="your.email@example.com">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="registerPassword" required minlength="6" placeholder="••••••••">
+      </div>
+      <div class="form-group">
+        <label>Role</label>
+        <select id="registerRole" required onchange="toggleConditionalFields()">
+          <option value="">Select your role</option>
+          <option value="student">Student</option>
+          <option value="founder">Founder</option>
+        </select>
+      </div>
+      
+      <!-- Conditional fields for Student -->
+      <div id="studentFields" class="conditional-field">
+        <div class="form-group">
+          <label>University</label>
+          <input type="text" id="registerUniversity" placeholder="e.g., IIT Delhi">
+        </div>
+        <div class="form-group">
+          <label>Course (Optional)</label>
+          <input type="text" id="registerCourse" placeholder="e.g., Computer Science">
+        </div>
+      </div>
+
+      <!-- Conditional fields for Founder -->
+      <div id="founderFields" class="conditional-field">
+        <div class="form-group">
+          <label>Startup Name</label>
+          <input type="text" id="registerStartup" placeholder="e.g., MyStartup">
+        </div>
+        <div class="form-group">
+          <label>Bio (Optional)</label>
+          <input type="text" id="registerBio" placeholder="Brief description about you">
+        </div>
+      </div>
+
+      <button type="submit" class="submit-btn">Create Account</button>
+      <div id="registerMessage" class="message"></div>
+    </form>
+
+    <div class="back-link">
+      <a href="blog.html">← Back to Stories</a>
+    </div>
+  </div>
+
+  <div id="loading" class="loading">
+    <div class="spinner"></div>
+  </div>
+
+  <script>
+    const API_BASE_URL = 'http://localhost:5000/api';
+
+    function showTab(tab) {
+      const tabs = document.querySelectorAll('.tab-btn');
+      const forms = document.querySelectorAll('.auth-form');
+      
+      tabs.forEach(btn => btn.classList.remove('active'));
+      forms.forEach(form => form.classList.remove('active'));
+      
+      if (tab === 'login') {
+        tabs[0].classList.add('active');
+        document.getElementById('loginForm').classList.add('active');
+      } else {
+        tabs[1].classList.add('active');
+        document.getElementById('registerForm').classList.add('active');
+      }
+    }
+
+    function toggleConditionalFields() {
+      const role = document.getElementById('registerRole').value;
+      const studentFields = document.getElementById('studentFields');
+      const founderFields = document.getElementById('founderFields');
+      
+      studentFields.classList.remove('show');
+      founderFields.classList.remove('show');
+      
+      if (role === 'student') {
+        studentFields.classList.add('show');
+        document.getElementById('registerUniversity').required = true;
+        document.getElementById('registerStartup').required = false;
+      } else if (role === 'founder') {
+        founderFields.classList.add('show');
+        document.getElementById('registerStartup').required = true;
+        document.getElementById('registerUniversity').required = false;
+      }
+    }
+
+    function showLoading() {
+      document.getElementById('loading').style.display = 'flex';
+    }
+
+    function hideLoading() {
+      document.getElementById('loading').style.display = 'none';
+    }
+
+    function showMessage(elementId, message, type) {
+      const messageEl = document.getElementById(elementId);
+      messageEl.textContent = message;
+      messageEl.className = `message ${type}`;
+      messageEl.style.display = 'block';
+    }
+
+    async function handleLogin(event) {
+      event.preventDefault();
+      
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      
+      showLoading();
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.message || 'Login failed');
+        }
+        
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify({
+          id: data.user._id,
+          name: data.user.name,
+          email: data.user.email,
+          role: data.user.role
+        }));
+        
+        showMessage('loginMessage', 'Login successful! Redirecting...', 'success');
+        setTimeout(() => {
+          window.location.href = 'blog.html';
+        }, 1000);
+      } catch (error) {
+        showMessage('loginMessage', error.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    async function handleRegister(event) {
+      event.preventDefault();
+      
+      const name = document.getElementById('registerName').value.trim();
+      const email = document.getElementById('registerEmail').value.trim();
+      const password = document.getElementById('registerPassword').value;
+      const role = document.getElementById('registerRole').value;
+      
+      if (!role) {
+        showMessage('registerMessage', 'Please select a role', 'error');
+        return;
+      }
+      
+      const userData = { name, email, password, role };
+      
+      // Add role-specific fields
+      if (role === 'student') {
+        const university = document.getElementById('registerUniversity').value.trim();
+        const course = document.getElementById('registerCourse').value.trim();
+        if (!university) {
+          showMessage('registerMessage', 'University is required for students', 'error');
+          return;
+        }
+        userData.university = university;
+        if (course) userData.course = course;
+      } else if (role === 'founder') {
+        const startup = document.getElementById('registerStartup').value.trim();
+        const bio = document.getElementById('registerBio').value.trim();
+        if (!startup) {
+          showMessage('registerMessage', 'Startup name is required for founders', 'error');
+          return;
+        }
+        userData.startup = startup;
+        if (bio) userData.bio = bio;
+      }
+      
+      showLoading();
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(userData)
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.message || 'Registration failed');
+        }
+        
+        showMessage('registerMessage', 'Registration successful! Please login.', 'success');
+        
+        setTimeout(() => {
+          showTab('login');
+          document.getElementById('loginEmail').value = email;
+        }, 1500);
+      } catch (error) {
+        showMessage('registerMessage', error.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    // Check if already logged in
+    if (localStorage.getItem('token')) {
+      window.location.href = 'blog.html';
+    }
+  </script>
+</body>
+</html>

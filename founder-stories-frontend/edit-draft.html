@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Draft - Founder's Stories</title>
+  <link rel="stylesheet" href="blog.css">
+  <link rel="stylesheet" href="write-blog.css">
+</head>
+<body>
+  <div class="page-background">
+    <!-- Header -->
+    <header class="write-header">
+      <div class="header-content">
+        <h1 class="write-title">Founder's Stories</h1>
+        <div class="header-actions">
+          <button class="btn btn-secondary" onclick="window.location.href='my-drafts.html'">← Back to Drafts</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="write-container">
+      <div class="page-header">
+        <h1 class="page-title">Edit Your Draft</h1>
+        <p class="page-subtitle">Continue working on your story</p>
+      </div>
+
+      <div id="loadingState" style="text-align: center; padding: 60px 20px; font-size: 18px; color: #666;">
+        Loading draft...
+      </div>
+
+      <div id="formContainer" class="form-card" style="display: none;">
+        <form id="editDraftForm" onsubmit="handleUpdate(event)">
+          <!-- Title -->
+          <div class="form-group">
+            <label class="form-label">
+              Title <span class="required">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="title" 
+              class="form-input" 
+              placeholder="Enter an inspiring title for your story..." 
+              required
+            >
+          </div>
+
+          <!-- Cover Image Upload -->
+          <div class="form-group">
+            <label class="form-label">
+              Cover Image <span style="font-weight: 400; color: #9ca3af;">(Optional)</span>
+            </label>
+            <div class="image-upload-container">
+              <input 
+                type="file" 
+                id="imageFile" 
+                class="file-input" 
+                accept="image/*"
+                onchange="handleImageUpload(event)"
+              >
+              <label for="imageFile" class="file-label">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+                Choose Image from Device
+              </label>
+            </div>
+          </div>
+
+          <!-- Image Preview -->
+          <div id="imagePreview" class="image-preview" style="display: none;">
+            <img id="previewImg" src="" alt="Preview">
+            <button type="button" class="remove-image-btn" onclick="removeImage()">✕ Remove</button>
+          </div>
+
+          <!-- Excerpt -->
+          <div class="form-group">
+            <label class="form-label">
+              Excerpt <span class="required">*</span>
+            </label>
+            <textarea 
+              id="excerpt" 
+              class="form-textarea" 
+              placeholder="Write a brief summary..." 
+              maxlength="300"
+              required
+            ></textarea>
+            <div class="char-count"><span id="excerptCount">0</span>/300 characters</div>
+          </div>
+
+          <!-- Full Story -->
+          <div class="form-group">
+            <label class="form-label">
+              Full Story <span class="required">*</span>
+            </label>
+            <textarea 
+              id="content" 
+              class="form-textarea large" 
+              placeholder="Tell your complete story here..."
+              required
+            ></textarea>
+          </div>
+
+          <!-- Category -->
+          <div class="form-group">
+            <label class="form-label">
+              Category <span class="required">*</span>
+            </label>
+            <select id="category" class="form-select" required>
+              <option value="">Select a category</option>
+              <option value="Technology">Technology</option>
+              <option value="Business">Business</option>
+              <option value="Sustainability">Sustainability</option>
+              <option value="EdTech">EdTech</option>
+              <option value="Food Tech">Food Tech</option>
+              <option value="Transportation">Transportation</option>
+              <option value="Mental Health">Mental Health</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <!-- Tags -->
+          <div class="form-group">
+            <label class="form-label">
+              Tags (comma-separated) <span style="font-weight: 400; color: #9ca3af;">(Optional)</span>
+            </label>
+            <input 
+              type="text" 
+              id="tags" 
+              class="form-input" 
+              placeholder="e.g., startup, technology, leadership"
+            >
+          </div>
+
+          <!-- Form Actions -->
+          <div class="form-actions">
+            <button type="button" class="btn-primary" onclick="publishDraft()">
+              ✨ Publish Now
+            </button>
+            <button type="submit" class="btn-draft">
+              💾 Update Draft
+            </button>
+            <button type="button" class="btn btn-secondary" style="background: #fee; color: #dc2626;" onclick="confirmDelete()">
+              🗑️ Delete Draft
+            </button>
+          </div>
+
+          <!-- Message -->
+          <div id="message" class="message"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE_URL = 'http://localhost:5000/api';
+    let currentDraftId = null;
+    let uploadedImageBase64 = null;
+
+    // Check authentication
+    function checkAuth() {
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      
+      if (!token || !userStr) {
+        alert('Please login to edit drafts.');
+        window.location.href = 'login.html';
+        return false;
+      }
+      
+      const user = JSON.parse(userStr);
+      if (user.role !== 'founder' && user.role !== 'admin') {
+        alert('Only founders can edit drafts.');
+        window.location.href = 'blog.html';
+        return false;
+      }
+      
+      return true;
+    }
+
+    // Get draft ID from URL
+    function getDraftId() {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('id');
+    }
+
+    // Load draft data
+    async function loadDraft() {
+      if (!checkAuth()) return;
+
+      const draftId = getDraftId();
+      if (!draftId) {
+        alert('No draft ID provided');
+        window.location.href = 'my-drafts.html';
+        return;
+      }
+
+      currentDraftId = draftId;
+
+      try {
+        const token = localStorage.getItem('token');
+        
+        const response = await fetch(`${API_BASE_URL}/blogs/${draftId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to load draft');
+        }
+
+        populateForm(data.blog);
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('formContainer').style.display = 'block';
+      } catch (error) {
+        console.error('Error loading draft:', error);
+        document.getElementById('loadingState').innerHTML = `
+          <p style="color: #dc2626;">❌ Error: ${error.message}</p>
+          <button class="btn btn-primary" onclick="window.location.href='my-drafts.html'" style="margin-top: 16px;">
+            Back to Drafts
+          </button>
+        `;
+      }
+    }
+
+    function populateForm(blog) {
+      document.getElementById('title').value = blog.title || '';
+      document.getElementById('excerpt').value = blog.excerpt || '';
+      document.getElementById('content').value = blog.content || '';
+      document.getElementById('category').value = blog.category || '';
+      document.getElementById('tags').value = blog.tags ? blog.tags.join(', ') : '';
+
+      // Update excerpt character count
+      document.getElementById('excerptCount').textContent = (blog.excerpt || '').length;
+
+      // Show existing image if available
+      if (blog.image) {
+        uploadedImageBase64 = blog.image;
+        document.getElementById('previewImg').src = blog.image;
+        document.getElementById('imagePreview').style.display = 'block';
+      }
+    }
+
+    // Character counter
+    document.addEventListener('DOMContentLoaded', () => {
+      const excerptField = document.getElementById('excerpt');
+      if (excerptField) {
+        excerptField.addEventListener('input', function() {
+          document.getElementById('excerptCount').textContent = this.value.length;
+        });
+      }
+    });
+
+    // Handle image upload
+    function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size must be less than 5MB');
+        event.target.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        uploadedImageBase64 = e.target.result;
+        document.getElementById('previewImg').src = e.target.result;
+        document.getElementById('imagePreview').style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeImage() {
+      uploadedImageBase64 = '';
+      document.getElementById('imageFile').value = '';
+      document.getElementById('imagePreview').style.display = 'none';
+    }
+
+    function showMessage(message, type) {
+      const messageEl = document.getElementById('message');
+      messageEl.textContent = message;
+      messageEl.className = `message ${type}`;
+      messageEl.style.display = 'block';
+      
+      setTimeout(() => {
+        messageEl.style.display = 'none';
+      }, 5000);
+    }
+
+    // Update draft
+    async function handleUpdate(event) {
+      event.preventDefault();
+      
+      const title = document.getElementById('title').value.trim();
+      const excerpt = document.getElementById('excerpt').value.trim();
+      const content = document.getElementById('content').value.trim();
+      const category = document.getElementById('category').value;
+      const tagsInput = document.getElementById('tags').value.trim();
+      const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+      
+      try {
+        const token = localStorage.getItem('token');
+        
+        const response = await fetch(`${API_BASE_URL}/blogs/${currentDraftId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            title,
+            excerpt,
+            content,
+            category,
+            tags,
+            image: uploadedImageBase64,
+            status: 'draft'
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to update draft');
+        }
+        
+        showMessage('✅ Draft updated successfully!', 'success');
+      } catch (error) {
+        console.error('Error:', error);
+        showMessage('❌ Error: ' + error.message, 'error');
+      }
+    }
+
+    // Publish draft
+    async function publishDraft() {
+      const title = document.getElementById('title').value.trim();
+      const excerpt = document.getElementById('excerpt').value.trim();
+      const content = document.getElementById('content').value.trim();
+      const category = document.getElementById('category').value;
+
+      if (!title || !excerpt || !content || !category) {
+        showMessage('❌ Please fill in all required fields before publishing', 'error');
+        return;
+      }
+
+      if (!confirm('Are you sure you want to publish this story? It will be visible to everyone.')) {
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem('token');
+        
+        const response = await fetch(`${API_BASE_URL}/blogs/${currentDraftId}/publish`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to publish');
+        }
+        
+        showMessage('✅ Story published successfully! Redirecting...', 'success');
+        
+        setTimeout(() => {
+          window.location.href = 'blog.html';
+        }, 1500);
+      } catch (error) {
+        console.error('Error:', error);
+        showMessage('❌ Error: ' + error.message, 'error');
+      }
+    }
+
+    // Delete draft
+    async function confirmDelete() {
+      if (!confirm('Are you sure you want to delete this draft? This action cannot be undone.')) {
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem('token');
+        
+        const response = await fetch(`${API_BASE_URL}/blogs/${currentDraftId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to delete draft');
+        }
+
+        alert('✅ Draft deleted successfully');
+        window.location.href = 'my-drafts.html';
+      } catch (error) {
+        console.error('Error:', error);
+        showMessage('❌ Error: ' + error.message, 'error');
+      }
+    }
+
+    // Load draft on page load
+    loadDraft();
+  </script>
+</body>
+</html>

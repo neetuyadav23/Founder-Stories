@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Write Your Story - Founder's Stories</title>
+  <link rel="stylesheet" href="blog.css">
+  <link rel="stylesheet" href="write-blog.css">
+</head>
+<body>
+  <div class="page-background">
+    <!-- Header -->
+    <header class="write-header">
+      <div class="header-content">
+        <h1 class="write-title">Founder's Stories</h1>
+        <div class="header-actions">
+          <button class="btn btn-secondary" onclick="window.location.href='blog.html'">← Back to Stories</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="write-container">
+      <div class="page-header">
+        <h1 class="page-title">Share Your Founder Story</h1>
+        <p class="page-subtitle">Inspire others with your entrepreneurial journey</p>
+      </div>
+
+      <div class="form-card">
+        <form id="writeBlogForm" onsubmit="handleSubmit(event)">
+          <!-- Title -->
+          <div class="form-group">
+            <label class="form-label">
+              Title <span class="required">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="title" 
+              class="form-input" 
+              placeholder="Enter an inspiring title for your story..." 
+              required
+            >
+          </div>
+
+          <!-- Cover Image Upload -->
+          <div class="form-group">
+            <label class="form-label">
+              Cover Image <span style="font-weight: 400; color: #9ca3af;">(Optional)</span>
+            </label>
+            <div class="image-upload-container">
+              <input 
+                type="file" 
+                id="imageFile" 
+                class="file-input" 
+                accept="image/*"
+                onchange="handleImageUpload(event)"
+              >
+              <label for="imageFile" class="file-label">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+                Choose Image from Device
+              </label>
+            </div>
+            <p class="helper-text">Upload a cover image (JPG, PNG, max 5MB) - Optional</p>
+          </div>
+
+          <!-- Image Preview -->
+          <div id="imagePreview" class="image-preview" style="display: none;">
+            <img id="previewImg" src="" alt="Preview">
+            <button type="button" class="remove-image-btn" onclick="removeImage()">✕ Remove</button>
+          </div>
+
+          <!-- Excerpt -->
+          <div class="form-group">
+            <label class="form-label">
+              Excerpt <span style="font-weight: 400; color: #9ca3af;">(Optional - Required for publishing)</span>
+            </label>
+            <textarea 
+              id="excerpt" 
+              class="form-textarea" 
+              placeholder="Write a brief summary that captures the essence of your story (2-3 sentences)..." 
+              maxlength="300"
+            ></textarea>
+            <div class="char-count"><span id="excerptCount">0</span>/300 characters</div>
+          </div>
+
+          <!-- Full Story -->
+          <div class="form-group">
+            <label class="form-label">
+              Full Story <span style="font-weight: 400; color: #9ca3af;">(Optional - Required for publishing)</span>
+            </label>
+            <textarea 
+              id="content" 
+              class="form-textarea large" 
+              placeholder="Tell your complete story here. Share your challenges, victories, lessons learned, and advice for other founders..."
+            ></textarea>
+          </div>
+
+          <!-- Category -->
+          <div class="form-group">
+            <label class="form-label">
+              Category <span style="font-weight: 400; color: #9ca3af;">(Optional - Required for publishing)</span>
+            </label>
+            <select id="category" class="form-select">
+              <option value="">Select a category</option>
+              <option value="Technology">Technology</option>
+              <option value="Business">Business</option>
+              <option value="Sustainability">Sustainability</option>
+              <option value="EdTech">EdTech</option>
+              <option value="Food Tech">Food Tech</option>
+              <option value="Transportation">Transportation</option>
+              <option value="Mental Health">Mental Health</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <!-- Tags -->
+          <div class="form-group">
+            <label class="form-label">
+              Tags (comma-separated) <span style="font-weight: 400; color: #9ca3af;">(Optional)</span>
+            </label>
+            <input 
+              type="text" 
+              id="tags" 
+              class="form-input" 
+              placeholder="e.g., startup, technology, leadership, innovation"
+            >
+          </div>
+
+          <!-- Form Actions -->
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">Publish Story</button>
+            <button type="button" class="btn-draft" onclick="saveDraft()">Save as Draft</button>
+          </div>
+
+          <!-- Message -->
+          <div id="message" class="message"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE_URL = 'http://localhost:5000/api';
+    let uploadedImageBase64 = null;
+
+    // Check authentication
+    function checkAuth() {
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      
+      if (!token || !userStr) {
+        alert('Please login to create a blog.');
+        window.location.href = 'login.html';
+        return;
+      }
+      
+      const user = JSON.parse(userStr);
+      if (user.role !== 'founder' && user.role !== 'admin') {
+        alert('Only founders can create blog posts.');
+        window.location.href = 'blog.html';
+      }
+    }
+
+    checkAuth();
+
+    // Character counter
+    document.getElementById('excerpt').addEventListener('input', function() {
+      const count = this.value.length;
+      document.getElementById('excerptCount').textContent = count;
+    });
+
+    // Handle image upload
+    function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size must be less than 5MB');
+        event.target.value = '';
+        return;
+      }
+
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        event.target.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        uploadedImageBase64 = e.target.result;
+        document.getElementById('previewImg').src = e.target.result;
+        document.getElementById('imagePreview').style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeImage() {
+      uploadedImageBase64 = null;
+      document.getElementById('imageFile').value = '';
+      document.getElementById('imagePreview').style.display = 'none';
+    }
+
+    function showMessage(message, type) {
+      const messageEl = document.getElementById('message');
+      messageEl.textContent = message;
+      messageEl.className = `message ${type}`;
+      messageEl.style.display = 'block';
+      
+      setTimeout(() => {
+        messageEl.style.display = 'none';
+      }, 5000);
+    }
+
+    async function handleSubmit(event) {
+      event.preventDefault();
+      
+      const title = document.getElementById('title').value.trim();
+      const excerpt = document.getElementById('excerpt').value.trim();
+      const content = document.getElementById('content').value.trim();
+      const category = document.getElementById('category').value;
+      
+      // Validation for publishing
+      if (!excerpt) {
+        showMessage('❌ Excerpt is required for publishing. Save as draft instead?', 'error');
+        return;
+      }
+      if (!content) {
+        showMessage('❌ Full story is required for publishing. Save as draft instead?', 'error');
+        return;
+      }
+      if (!category) {
+        showMessage('❌ Category is required for publishing. Save as draft instead?', 'error');
+        return;
+      }
+      
+      const tagsInput = document.getElementById('tags').value.trim();
+      const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+      
+      try {
+        const token = localStorage.getItem('token');
+        
+        const response = await fetch(`${API_BASE_URL}/blogs`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            title,
+            excerpt,
+            content,
+            category,
+            tags,
+            image: uploadedImageBase64,
+            status: 'published'
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to publish');
+        }
+        
+        showMessage('✅ Blog published successfully! Redirecting...', 'success');
+        
+        setTimeout(() => {
+          window.location.href = 'blog.html';
+        }, 1500);
+      } catch (error) {
+        console.error('Error:', error);
+        showMessage('❌ Error: ' + error.message, 'error');
+      }
+    }
+
+    async function saveDraft() {
+  const title = document.getElementById('title').value.trim();
+  
+  if (!title) {
+    showMessage('❌ Please enter at least a title for the draft.', 'error');
+    return;
+  }
+  
+  const excerpt = document.getElementById('excerpt').value.trim();
+  const content = document.getElementById('content').value.trim();
+  const category = document.getElementById('category').value;
+  const tagsInput = document.getElementById('tags').value.trim();
+  const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+  
+  try {
+    const token = localStorage.getItem('token');
+    
+    const response = await fetch(`${API_BASE_URL}/blogs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        title,
+        excerpt: excerpt || '',
+        content: content || '',
+        category: category || undefined,  // ← Changed from 'Other' to undefined
+        tags,
+        image: uploadedImageBase64 || '',
+        status: 'draft'
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to save draft');
+    }
+    
+    showMessage('✅ Draft saved successfully! Redirecting to My Drafts...', 'success');
+    
+    setTimeout(() => {
+      window.location.href = 'my-drafts.html';
+    }, 1500);
+  } catch (error) {
+    console.error('Error:', error);
+    showMessage('❌ Error: ' + error.message, 'error');
+  }
+}
+  </script>
+</body>
+</html>
