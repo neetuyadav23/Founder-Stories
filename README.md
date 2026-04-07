@@ -126,9 +126,28 @@ npm run dev
 
 ---
 
-## 📸 Screenshots
+## 📸 Screenshots 
 
-*(Add your UI screenshots here for better impact)*
+### 📝 Register Page  
+![Register](founder-stories-frontend/ui-images/Register.png)
+
+### 🔐 Login Page  
+![Login](founder-stories-frontend/ui-images/Login.png)
+
+### 🏠 Home Page  
+![Home](founder-stories-frontend/ui-images/HomePage.png)
+
+### 🔥 Trending Section  
+![Trending](founder-stories-frontend/ui-images/Trending.png)
+
+### 📝 Drafts  
+![Drafts](founder-stories-frontend/ui-images/Drafts.png)
+
+### ✍️ Write Blog (Step 1)  
+![WriteBlog1](founder-stories-frontend/ui-images/WriteBlog1.png)
+
+### ✍️ Write Blog (Step 2)  
+![WriteBlog2](founder-stories-frontend/ui-images/WriteBlog2.png)
 
 ---
 
