@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const Blog = require('../models/Blog');
-const Comment = require('../models/comment');
+const Comment = require('../models/Comment');
 const Activity = require('../models/Activity');
 const { authenticate, isAdmin } = require('../middleware/auth');
 
